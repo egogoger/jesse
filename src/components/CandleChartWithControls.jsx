@@ -232,6 +232,24 @@ export default function CandleChartWithControls({
         rsiChartRef.current = rsiChart;
         rsiSeriesRef.current = rsiSeries;
 
+        // **Add the 70 line**
+        rsiSeries.createPriceLine({
+            price: 70,
+            color: 'rgba(255, 0, 0, 0.8)', // Red for overbought
+            lineWidth: 1,
+            lineStyle: 2, // LineStyle.Dashed
+            axisLabelVisible: true,
+        });
+
+        // **Add the 30 line**
+        rsiSeries.createPriceLine({
+            price: 30,
+            color: 'rgba(0, 255, 0, 0.8)', // Green for oversold
+            lineWidth: 1,
+            lineStyle: 2, // LineStyle.Dashed
+            axisLabelVisible: true,
+        });
+
         // Volume chart
         const volChart = createChart(volChartContainerRef.current, {
             timeScale: {
@@ -465,6 +483,25 @@ export default function CandleChartWithControls({
         }
     }, [currentAnchorTime, candles]);
 
+    // --------------------------------------------------------------
+    //                 KEYBOARD SHORTCUTS
+    // --------------------------------------------------------------
+
+    const handleKey = useCallback((e) => {
+        if (e.target.tagName === "INPUT") return;
+
+        const key = e.key.toLowerCase();
+
+        if (key === "f") handleToggleFF();
+        if (key === "x") handleReset();
+        if (key === "z") onObfuscateChange(prev => !prev);
+    }, [handleToggleFF, handleReset, onObfuscateChange]);
+
+    useEffect(() => {
+        window.addEventListener("keydown", handleKey);
+        return () => window.removeEventListener("keydown", handleKey);
+    }, [handleKey]);
+
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, height: "100%" }}>
             {/* Controls */}
@@ -527,11 +564,11 @@ export default function CandleChartWithControls({
             <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
                 <div
                     ref={candleChartContainerRef}
-                    style={{ flex: 3, width: "100%", border: "1px solid #ccc" }}
+                    style={{ flex: 8, width: "100%", border: "1px solid #ccc" }}
                 />
                 <div
                     ref={rsiChartContainerRef}
-                    style={{ flex: 1.5, width: "100%", border: "1px solid #ccc" }}
+                    style={{ flex: 1, width: "100%", border: "1px solid #ccc" }}
                 />
                 <div
                     ref={volChartContainerRef}

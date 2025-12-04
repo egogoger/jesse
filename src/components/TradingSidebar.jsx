@@ -1,235 +1,242 @@
-// src/components/TradingSidebar.js
+// TradingSidebar.js
 
-import React, { useEffect, useState, useMemo } from 'react';
-import { fetchOrders, placeOrder, closeOrder, addMoreToOrder } from '../api';
+import React, { useEffect, useState, useCallback } from "react";
+import {
+    placeOrder,
+    closeOrder,
+} from "../api";
+
+// A temporary order object exists ONLY in UI.
+// It is saved to DB only on close.
+function createLocalOrder(ticker, interval, side, entryTime, entryPrice) {
+    return {
+        id: null,               // DB ID assigned only when closing
+        ticker,
+        interval,
+        side,                   // "long" or "short"
+        entryTime,
+        entryPrice,
+        exitTime: null,
+        exitPrice: null,
+        pnl: 0,
+        status: "open",
+    };
+}
 
 export default function TradingSidebar({
     obfuscate,
     currentTicker,
     currentInterval,
-    currentTime, // last visible candle time (real ISO)
+    currentTime,
+    currentPrice,   // you must pass c.c from your candle renderer
     onJumpToTime,
 }) {
-    const [ordersOpen, setOrdersOpen] = useState([]);
-    const [ordersClosed, setOrdersClosed] = useState([]);
-    const [side, setSide] = useState('long');
-    const [size, setSize] = useState(1);
-    const [loading, setLoading] = useState(false);
+    const [openOrder, setOpenOrder] = useState(null);
+    const [closedOrders, setClosedOrders] = useState([]);
 
-    const loadOrders = async () => {
-        try {
-            const { open, closed } = await fetchOrders();
-            setOrdersOpen(open || []);
-            setOrdersClosed(closed || []);
-        } catch (e) {
-            console.error(e);
+    // --------------------------------------------------------------
+    //                   ACTION: BUY (Long)
+    // --------------------------------------------------------------
+
+    const handleBuy = useCallback(() => {
+        if (!currentTicker || !currentTime || !currentPrice) return;
+
+        if (openOrder && openOrder.side === "short") {
+            handleCloseOrder(); // Close short instead
+            return;
         }
-    };
+
+        // open a new long position locally
+        setOpenOrder(
+            createLocalOrder(
+                currentTicker,
+                currentInterval,
+                "long",
+                currentTime,
+                currentPrice
+            )
+        );
+    }, [currentTicker, currentInterval, currentTime, currentPrice, openOrder]);
+
+    // --------------------------------------------------------------
+    //                   ACTION: SELL (Short)
+    // --------------------------------------------------------------
+
+    const handleSell = useCallback(() => {
+        if (!currentTicker || !currentTime || !currentPrice) return;
+
+        if (openOrder && openOrder.side === "long") {
+            handleCloseOrder(); // Close long instead
+            return;
+        }
+
+        // open a new short position locally
+        setOpenOrder(
+            createLocalOrder(
+                currentTicker,
+                currentInterval,
+                "short",
+                currentTime,
+                currentPrice
+            )
+        );
+    }, [currentTicker, currentInterval, currentTime, currentPrice, openOrder]);
+
+    // --------------------------------------------------------------
+    //     UPDATE PnL LIVE WHEN PRICE CHANGES (open order only)
+    // --------------------------------------------------------------
 
     useEffect(() => {
-        loadOrders();
-    }, []);
+        if (!openOrder) return;
+        if (!currentPrice) return;
 
-    const latestOpenOrder = useMemo(
-        () =>
-            ordersOpen.length
-                ? ordersOpen[ordersOpen.length - 1]
-                : null,
-        [ordersOpen]
-    );
+        let pnl =
+            openOrder.side === "long"
+                ? currentPrice - openOrder.entryPrice
+                : openOrder.entryPrice - currentPrice;
 
-    const handlePlaceOrder = async () => {
-        if (!currentTicker || !currentTime) return;
-        setLoading(true);
-        try {
-            await placeOrder({
-                ticker: currentTicker,
-                interval: currentInterval,
-                side,
-                size: Number(size),
-                placedAtISO: currentTime,
-            });
-            await loadOrders();
-        } catch (e) {
-            console.error(e);
-        } finally {
-            setLoading(false);
-        }
-    };
+        setOpenOrder((prev) => ({
+            ...prev,
+            pnl,
+        }));
+    }, [currentPrice]);
 
-    const handleCloseLatest = async () => {
-        if (!latestOpenOrder) return;
-        setLoading(true);
-        try {
-            await closeOrder(latestOpenOrder.id);
-            await loadOrders();
-        } catch (e) {
-            console.error(e);
-        } finally {
-            setLoading(false);
-        }
-    };
+    // --------------------------------------------------------------
+    //                     CLOSE ORDER (SAVED TO DB)
+    // --------------------------------------------------------------
 
-    const handleAddMoreSameDirection = async () => {
-        if (!latestOpenOrder) return;
-        setLoading(true);
-        try {
-            await addMoreToOrder(latestOpenOrder.id, Number(size));
-            await loadOrders();
-        } catch (e) {
-            console.error(e);
-        } finally {
-            setLoading(false);
-        }
-    };
+    const handleCloseOrder = useCallback(async () => {
+        if (!openOrder) return;
 
-    const renderTicker = (t) => {
-        if (!t) return '';
-        return obfuscate ? '***' : t;
-    };
+        const exitPrice = currentPrice;
+        const exitTime = currentTime;
 
-    const renderDate = (iso) => {
-        if (!iso) return '';
-        return obfuscate ? '****-**-** **:**' : new Date(iso).toLocaleString();
-    };
+        const pnl =
+            openOrder.side === "long"
+                ? exitPrice - openOrder.entryPrice
+                : openOrder.entryPrice - exitPrice;
 
-    const renderPnL = (pnl) => {
-        if (pnl == null) return '';
-        return pnl.toFixed(2);
-    };
+        // send to backend now (order is permanently stored)
+        const result = await closeOrderOnBackend({
+            ...openOrder,
+            exitPrice,
+            exitTime,
+            pnl,
+        });
+
+        setClosedOrders((prev) => [...prev, result]);
+        setOpenOrder(null);
+    }, [openOrder, currentPrice, currentTime]);
+
+    async function closeOrderOnBackend(order) {
+        // When closing, save into DB:
+        // 1) placeOrder() → writes entry
+        // 2) closeOrder() → fills exit + pnl
+        const entry = await placeOrder({
+            ticker: order.ticker,
+            interval: order.interval,
+            side: order.side,
+            size: 1,
+            placedAtISO: order.entryTime,
+        });
+
+        const closed = await closeOrder(entry.id, {
+            exitTimeISO: order.exitTime,
+        });
+
+        return closed;
+    }
+
+    // --------------------------------------------------------------
+    //                 KEYBOARD SHORTCUTS: Q = Buy, R = Sell
+    // --------------------------------------------------------------
+
+    const handleKey = useCallback((e) => {
+        if (e.target.tagName === "INPUT") return;
+
+        const key = e.key.toLowerCase();
+
+        if (key === "q") handleBuy();
+        if (key === "r") handleSell();
+    }, [handleBuy, handleSell]);
+
+    useEffect(() => {
+        window.addEventListener("keydown", handleKey);
+        return () => window.removeEventListener("keydown", handleKey);
+    }, [handleKey]);
+
+    // --------------------------------------------------------------
+    //                   DISPLAY HELPERS
+    // --------------------------------------------------------------
+
+    const fmt = (n) => (n == null ? "" : n.toFixed(2));
+
+    const obf = (val) => (obfuscate ? "***" : val);
+
+    // --------------------------------------------------------------
+    //                   COMPONENT RENDER
+    // --------------------------------------------------------------
 
     return (
-        <div style={{ padding: 8, borderLeft: '1px solid #ccc', height: '100%', overflowY: 'auto' }}>
+        <div style={{ padding: 8, borderLeft: "1px solid #ccc", height: "100%", overflowY: "auto" }}>
             <h3>Trading</h3>
 
-            <div
-                style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: 8,
-                    marginBottom: 16,
-                }}
-            >
-                <div>
-                    <strong>Current context</strong>
-                    <div>Ticker: {renderTicker(currentTicker)}</div>
-                    <div>Interval: {currentInterval}</div>
-                    <div>Time: {renderDate(currentTime)}</div>
+            <strong>Current</strong>
+            <div>Ticker: {obf(currentTicker)}</div>
+            <div>Interval: {obf(currentInterval)}</div>
+            <div>Time: {obf(currentTime)}</div>
+            <div>Price: {fmt(currentPrice)}</div>
+
+            <hr />
+
+            <button onClick={handleBuy} style={{ width: "50%"}}>
+                Buy (Q)
+            </button>
+
+            <button onClick={handleSell} style={{ width: "50%", marginBottom: 12 }}>
+                Sell (R)
+            </button>
+
+            {/* OPEN ORDER */}
+            {openOrder && (
+                <div style={{ border: "1px solid #ddd", padding: 8, marginBottom: 16 }}>
+                    <h4>Open Order</h4>
+                    <div>Side: {openOrder.side}</div>
+                    <div>Entry Price: {fmt(openOrder.entryPrice)}</div>
+                    <div>Entry Time: {obf(openOrder.entryTime)}</div>
+                    <div>Current PnL: {fmt(openOrder.pnl)}</div>
+
+                    <button
+                        style={{ marginTop: 8, width: "100%" }}
+                        onClick={handleCloseOrder}
+                    >
+                        Close
+                    </button>
                 </div>
+            )}
 
-                <div>
-                    <label>
-                        Side:&nbsp;
-                        <select value={side} onChange={(e) => setSide(e.target.value)}>
-                            <option value="long">Long</option>
-                            <option value="short">Short</option>
-                        </select>
-                    </label>
-                </div>
+            {/* CLOSED ORDERS */}
+            <h4>Closed Orders</h4>
+            {closedOrders.length === 0 && <div>No closed orders</div>}
 
-                <div>
-                    <label>
-                        Size:&nbsp;
-                        <input
-                            type="number"
-                            min="0.01"
-                            step="0.01"
-                            value={size}
-                            onChange={(e) => setSize(e.target.value)}
-                            style={{ width: 80 }}
-                        />
-                    </label>
-                </div>
-
-                <button onClick={handlePlaceOrder} disabled={loading || !currentTime}>
-                    Place order
-                </button>
-
-                <button onClick={handleCloseLatest} disabled={loading || !latestOpenOrder}>
-                    Close current order
-                </button>
-
-                <button
-                    onClick={handleAddMoreSameDirection}
-                    disabled={loading || !latestOpenOrder}
+            {closedOrders.map((o) => (
+                <div
+                    key={o.id}
+                    style={{ border: "1px solid #eee", padding: 6, marginBottom: 6 }}
                 >
-                    Add more (same direction)
-                </button>
+                    <div>{obf(o.ticker)} {o.side}</div>
+                    <div>Entry: {fmt(o.entryPrice)}</div>
+                    <div>Exit: {fmt(o.exitPrice)}</div>
+                    <div>PnL: {fmt(o.pnl)}</div>
 
-                {loading && <span>Saving…</span>}
-            </div>
-
-            <h4>Open orders</h4>
-            <OrdersTable
-                orders={ordersOpen}
-                obfuscate={obfuscate}
-                onJumpToTime={onJumpToTime}
-                titleEmpty="No open orders"
-            />
-
-            <h4 style={{ marginTop: 16 }}>Closed orders</h4>
-            <OrdersTable
-                orders={ordersClosed}
-                obfuscate={obfuscate}
-                onJumpToTime={onJumpToTime}
-                titleEmpty="No closed orders"
-                showPnL
-            />
+                    <button
+                        style={{ marginTop: 4, width: "100%" }}
+                        onClick={() => onJumpToTime(o.entryTime)}
+                    >
+                        Go to Time
+                    </button>
+                </div>
+            ))}
         </div>
     );
 }
-
-function OrdersTable({ orders, obfuscate, onJumpToTime, titleEmpty, showPnL }) {
-    const renderTicker = (t) => (obfuscate ? '***' : t);
-    const renderDate = (iso) =>
-        obfuscate ? '****-**-** **:**' : new Date(iso).toLocaleString();
-
-    if (!orders.length) {
-        return <div>{titleEmpty}</div>;
-    }
-
-    return (
-        <table style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse' }}>
-            <thead>
-                <tr>
-                    <th style={th}>Date</th>
-                    <th style={th}>Ticker</th>
-                    <th style={th}>Side</th>
-                    <th style={th}>Size</th>
-                    {showPnL && <th style={th}>PnL</th>}
-                    <th style={th}>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {orders.map((o) => (
-                    <tr key={o.id}>
-                        <td style={td}>{renderDate(o.entryTime)}</td>
-                        <td style={td}>{renderTicker(o.ticker)}</td>
-                        <td style={td}>{o.side}</td>
-                        <td style={td}>{o.size}</td>
-                        {showPnL && <td style={td}>{o.pnl != null ? o.pnl.toFixed(2) : ''}</td>}
-                        <td style={td}>
-                            <button
-                                onClick={() => onJumpToTime && onJumpToTime(o.entryTime)}
-                                style={{ fontSize: 11 }}
-                            >
-                                Go to candles
-                            </button>
-                        </td>
-                    </tr>
-                ))}
-            </tbody>
-        </table>
-    );
-}
-
-const th = {
-    borderBottom: '1px solid #ccc',
-    textAlign: 'left',
-    padding: '2px 4px',
-};
-
-const td = {
-    borderBottom: '1px solid #eee',
-    padding: '2px 4px',
-};
