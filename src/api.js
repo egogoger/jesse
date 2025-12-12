@@ -30,6 +30,20 @@ export async function fetchMorePastCandles({ ticker, interval, before, limit = 5
     return res.json(); // { candles: [...], hasMorePast: bool }
 }
 
+export async function fetchAlignedCandles({ ticker, interval, targetTime }) {
+    const params = new URLSearchParams({
+        ticker,
+        interval,
+        targetTime,
+    });
+
+    const res = await fetch(`/api/candles/aligned?${params.toString()}`);
+    if (!res.ok) {
+        throw new Error('Failed to fetch aligned candles');
+    }
+    return res.json(); // returns { candles, hasMorePast, hasMoreFuture }
+}
+
 // GET /api/meta/tickers -> ["IMOEXF", "SOMEOTHER", ...]
 export async function fetchTickers() {
     const res = await fetch(`${API_BASE}/meta/tickers`);
