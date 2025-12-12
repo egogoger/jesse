@@ -1,13 +1,13 @@
 // src/components/TradingCharts.jsx
 import React, { useEffect, useRef } from 'react';
-import { createChart } from 'lightweight-charts';
+import { createChart, CrosshairMode } from 'lightweight-charts';
 import { tickMarkFormatter, syncAllCrosshairs } from '../utils/chartHelpers';
 
 export default function TradingCharts({ 
     candles, 
     rsiData, 
     volData, 
-    onLoadMorePast 
+    onLoadMorePast,
 }) {
     const candleChartContainerRef = useRef(null);
     const rsiChartContainerRef = useRef(null);
@@ -25,6 +25,7 @@ export default function TradingCharts({
         if (!candleChartContainerRef.current) return;
 
         const commonOptions = {
+            crosshair: { mode: CrosshairMode.Normal },
             timeScale: {
                 rightOffset: 2,
                 barSpacing: 6,
@@ -114,7 +115,7 @@ export default function TradingCharts({
             // Для упрощения, логику "когда" можно оставить здесь, но данные брать из пропсов
             if (onLoadMorePast) onLoadMorePast(range.from); 
         });
-
+        
         return () => {
             window.removeEventListener('resize', handleResize);
             candleChart.remove();

@@ -29,7 +29,7 @@ export default function CandleChartWithControls({
         tickers, intervals,
         selectedTicker, setSelectedTicker,
         selectedInterval, setSelectedInterval,
-        candles, setCandles,
+        candles,
         loading,
         loadRandomSeries, loadMorePast
     } = useMarketData(currentAnchorTime);
@@ -63,18 +63,13 @@ export default function CandleChartWithControls({
         }
     }, [loadRandomSeries, onAnchorTimeChange, onReadyForTrading, selectedTicker, selectedInterval, setIsFFRunning, setVisibleEndIndex]);
 
-    // Auto-load on mount/change
-    useEffect(() => {
-        handleReset();
-    }, [handleReset]);
-
+    useEffect(()=>{
+        if (tickers.length && intervals.length)
+            handleReset();
+    }, [tickers.length, intervals.length]);
 
     // Handlers
     const handleIntervalChange = (val) => {
-        if (currentAnchorTime) {
-            const snapped = snapTimeToInterval(currentAnchorTime, val);
-            onAnchorTimeChange(snapped);
-        }
         isSwitchingIntervalRef.current = true;
         setSelectedInterval(val);
     };

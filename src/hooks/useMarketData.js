@@ -1,6 +1,9 @@
 // src/hooks/useMarketData.js
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { fetchTickers, fetchIntervals, fetchRandomCandles, fetchMorePastCandles, fetchAlignedCandles } from '../api';
+import { snapTimeToInterval } from '../utils/chartHelpers';
+
+const MAIN_INTERVAL = '5min';
 
 export function useMarketData(currentAnchorTime) {
     const [tickers, setTickers] = useState([]);
@@ -24,7 +27,8 @@ export function useMarketData(currentAnchorTime) {
             try {
                 const t = await fetchTickers();
                 setTickers(t);
-                if (t.length) setSelectedTicker(prev => prev || t[0]);
+                if (t.length)
+                    setSelectedTicker(prev => prev || t[Math.floor(Math.random() * t.length)]);
             } catch (e) {
                 console.error(e);
             }
@@ -72,12 +76,12 @@ export function useMarketData(currentAnchorTime) {
         try {
             // 1. Округляем время под новый интервал (например 05:55 -> 05:00 для 1h)
             const snappedTime = snapTimeToInterval(targetTime, selectedInterval);
-            
+
             // 2. Вызываем новый API метод
             const { candles: newCandles, hasMorePast: morePast } = await fetchAlignedCandles({
                 ticker: selectedTicker,
                 interval: selectedInterval,
-                targetTime: snappedTime,
+                targetTime: snappedTime.replace(/\.000Z$/, 'Z'),
             });
 
             setCandles(newCandles);
@@ -102,7 +106,7 @@ export function useMarketData(currentAnchorTime) {
             // Если якоря нет (первая загрузка), берем рандом
             loadRandomSeries();
         }
-        
+
         // ВАЖНО: В зависимостях НЕТ anchorTimeRef.current, только ticker/interval.
         // Это гарантирует, что эффект сработает только при смене тикера или интервала.
     }, [selectedTicker, selectedInterval, loadRandomSeries, loadAlignedSeries]);
@@ -117,7 +121,7 @@ export function useMarketData(currentAnchorTime) {
                 before: oldest.time,
                 limit: 500,
             });
-            
+
             if (more && more.length) {
                 setCandles(prev => [...more, ...prev]);
                 setHasMorePast(morePast);

@@ -18,9 +18,9 @@ export function snapTimeToInterval(iso, interval) {
     const d = new Date(iso);
     if (interval === "5min") d.setMinutes(Math.floor(d.getMinutes() / 5) * 5, 0, 0);
     else if (interval === "15min") d.setMinutes(Math.floor(d.getMinutes() / 15) * 15, 0, 0);
-    else if (interval === "1h") d.setMinutes(0, 0, 0);
-    else if (interval === "4h") d.setHours(Math.floor(d.getHours() / 4) * 4, 0, 0, 0);
-    else if (interval === "1d") d.setHours(0, 0, 0, 0);
+    else if (interval === "hour") d.setMinutes(0, 0, 0);
+    else if (interval === "4hour") d.setHours(Math.floor(d.getHours() / 4) * 4, 0, 0, 0);
+    else if (interval === "day") d.setHours(0, 0, 0, 0);
     return d.toISOString();
 }
 
