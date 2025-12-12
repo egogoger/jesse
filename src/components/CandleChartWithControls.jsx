@@ -7,6 +7,7 @@ import {
     snapTimeToInterval,
     buildSyntheticCandle
 } from '../utils/chartHelpers';
+import {THEME} from '../utils/consts';
 
 import { useMarketData } from '../hooks/useMarketData';
 import { useChartPlayer } from '../hooks/useChartPlayer';
@@ -142,7 +143,7 @@ export default function CandleChartWithControls({
             return {
                 time: toTs(c.displayTime),
                 value: c.v,
-                color: isUp ? "#26a69a" : isDown ? "#ef5350" : "#999999",
+                color: isUp ? THEME.volumeUp : isDown ? THEME.volumeDown : "#999999",
             };
         });
 

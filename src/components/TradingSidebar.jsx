@@ -178,7 +178,7 @@ export default function TradingSidebar({
     // --------------------------------------------------------------
 
     return (
-        <div style={{ padding: 8, borderLeft: "1px solid #ccc", height: "100%", overflowY: "auto" }}>
+        <div style={{ padding: 8, height: "100%", overflowY: "auto" }}>
             <h3>Trading</h3>
 
             <strong>Current</strong>
