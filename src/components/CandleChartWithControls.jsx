@@ -1,13 +1,13 @@
 // src/components/CandleChartWithControls.jsx
 
-import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
+import React, { useEffect, useCallback, useRef, useMemo } from 'react';
 import { calculateRSI } from '../utils/rsi';
 import {
     obfuscateTime,
     snapTimeToInterval,
     buildSyntheticCandle
 } from '../utils/chartHelpers';
-import {THEME} from '../utils/consts';
+import { OBFUSCATE_DAYS_OFFSET, THEME } from '../utils/consts';
 
 import { useMarketData } from '../hooks/useMarketData';
 import { useChartPlayer } from '../hooks/useChartPlayer';
@@ -21,8 +21,9 @@ export default function CandleChartWithControls({
     currentAnchorTime,
     onAnchorTimeChange,
     onReadyForTrading,
+    openOrder,
+    commission,
 }) {
-    const [randomOffsetDays] = useState(() => 10000);
     const isSwitchingIntervalRef = useRef(false);
 
     // Custom Hooks
@@ -32,7 +33,7 @@ export default function CandleChartWithControls({
         selectedInterval, setSelectedInterval,
         candles,
         loading,
-        loadRandomSeries, loadMorePast
+        loadRandomSeries, loadMorePast,
     } = useMarketData(currentAnchorTime);
 
     const {
@@ -58,13 +59,14 @@ export default function CandleChartWithControls({
                         ticker: selectedTicker,
                         interval: selectedInterval,
                         lastTime: last.time,
+                        price: last.c,
                     });
                 }
             }
         }
     }, [loadRandomSeries, onAnchorTimeChange, onReadyForTrading, selectedTicker, selectedInterval, setIsFFRunning, setVisibleEndIndex]);
 
-    useEffect(()=>{
+    useEffect(() => {
         if (tickers.length && intervals.length)
             handleReset();
     }, [tickers.length, intervals.length]);
@@ -116,7 +118,7 @@ export default function CandleChartWithControls({
 
         const visible = sliced.map((c, idx) => ({
             ...c,
-            displayTime: obfuscate ? obfuscateTime(c.time, randomOffsetDays) : c.time,
+            displayTime: obfuscate ? obfuscateTime(c.time, OBFUSCATE_DAYS_OFFSET) : c.time,
             logicalIndex: idx,
         }));
 
@@ -148,7 +150,7 @@ export default function CandleChartWithControls({
         });
 
         return { chartCandles: cData, chartRsi: rData, chartVol: vData, lastVisible: visible[visible.length - 1] };
-    }, [candles, visibleEndIndex, isFFRunning, selectedInterval, obfuscate, randomOffsetDays]);
+    }, [candles, visibleEndIndex, isFFRunning, selectedInterval, obfuscate]);
 
     // Notify Parent about Time Updates
     useEffect(() => {
@@ -168,6 +170,7 @@ export default function CandleChartWithControls({
                 ticker: selectedTicker,
                 interval: selectedInterval,
                 lastTime: lastVisible.time,
+                price: lastVisible.c,
             });
         }
     }, [visibleEndIndex, candles, onAnchorTimeChange, onReadyForTrading, selectedTicker, selectedInterval]);
@@ -210,6 +213,8 @@ export default function CandleChartWithControls({
                 rsiData={chartRsi}
                 volData={chartVol}
                 onLoadMorePast={handleLoadMorePast}
+                openOrder={openOrder}
+                commission={commission}
             />
         </div>
     );

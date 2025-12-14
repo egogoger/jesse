@@ -9,15 +9,18 @@ export default function TradingCharts({
     rsiData,
     volData,
     onLoadMorePast,
+    openOrder,
+    commission,
 }) {
     const candleChartContainerRef = useRef(null);
     const rsiChartContainerRef = useRef(null);
-
     const candleChartRef = useRef(null);
     const candleSeriesRef = useRef(null);
     const rsiChartRef = useRef(null);
     const rsiSeriesRef = useRef(null);
     const volSeriesRef = useRef(null);
+    const entryLineRef = useRef(null);
+    const profitLineRef = useRef(null);
 
     // 1. Инициализация графиков (один раз)
     useEffect(() => {
@@ -143,13 +146,56 @@ export default function TradingCharts({
         };
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-
     // 2. Обновление данных
     useEffect(() => {
         if (candleSeriesRef.current) candleSeriesRef.current.setData(candles);
         if (rsiSeriesRef.current) rsiSeriesRef.current.setData(rsiData);
         if (volSeriesRef.current) volSeriesRef.current.setData(volData);
     }, [candles, rsiData, volData]);
+
+    // 3. Entry price and profit lines on graph
+    useEffect(() => {
+        if (!candleSeriesRef.current) return;
+
+        // cleanup
+        if (entryLineRef.current) {
+            candleSeriesRef.current.removePriceLine(entryLineRef.current);
+            entryLineRef.current = null;
+        }
+        if (profitLineRef.current) {
+            candleSeriesRef.current.removePriceLine(profitLineRef.current);
+            profitLineRef.current = null;
+        }
+
+        if (!openOrder) return;
+
+        const isLong = openOrder.side === "long";
+        const color = isLong ? "#00c853" : "#ff5252";
+
+        entryLineRef.current = candleSeriesRef.current.createPriceLine({
+            price: openOrder.entryPrice,
+            color,
+            lineWidth: 2,
+            lineStyle: 0,
+            axisLabelVisible: true,
+            title: "Entry",
+        });
+
+        if (commission <= 0) return;
+
+        const profitPrice = isLong
+            ? openOrder.entryPrice + 2 * commission
+            : openOrder.entryPrice - 2 * commission;
+
+        profitLineRef.current = candleSeriesRef.current.createPriceLine({
+            price: profitPrice,
+            color,
+            lineWidth: 1,
+            lineStyle: 2, // dashed
+            axisLabelVisible: true,
+            title: "TP",
+        });
+    }, [openOrder]);
 
     return (
         <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>

@@ -16,7 +16,7 @@ export default function ChartControls({
     onFfSpeedChange,
     onReset,
     loading,
-    hasData
+    hasData,
 }) {
     return (
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>

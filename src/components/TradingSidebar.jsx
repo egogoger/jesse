@@ -30,8 +30,10 @@ export default function TradingSidebar({
     currentTime,
     currentPrice,   // you must pass c.c from your candle renderer
     onJumpToTime,
+    openOrder,
+    setOpenOrder,
+    commission,
 }) {
-    const [openOrder, setOpenOrder] = useState(null);
     const [closedOrders, setClosedOrders] = useState([]);
 
     // --------------------------------------------------------------
@@ -186,10 +188,11 @@ export default function TradingSidebar({
             <div>Interval: {obf(currentInterval)}</div>
             <div>Time: {obf(currentTime)}</div>
             <div>Price: {fmt(currentPrice)}</div>
+            <div>Commission: {obf(commission)}%</div>
 
             <hr />
 
-            <button onClick={handleBuy} style={{ width: "50%"}}>
+            <button onClick={handleBuy} style={{ width: "50%" }}>
                 Buy (Q)
             </button>
 

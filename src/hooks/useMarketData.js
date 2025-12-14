@@ -1,9 +1,7 @@
 // src/hooks/useMarketData.js
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { fetchTickers, fetchIntervals, fetchRandomCandles, fetchMorePastCandles, fetchAlignedCandles } from '../api';
 import { snapTimeToInterval } from '../utils/chartHelpers';
-
-const MAIN_INTERVAL = '5min';
 
 export function useMarketData(currentAnchorTime) {
     const [tickers, setTickers] = useState([]);
@@ -148,6 +146,6 @@ export function useMarketData(currentAnchorTime) {
         hasMorePast,
         loading,
         loadRandomSeries,
-        loadMorePast
+        loadMorePast,
     };
 }

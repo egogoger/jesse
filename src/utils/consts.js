@@ -8,3 +8,13 @@ export const THEME = {
     volumeDown: 'rgba(239,83,80,0.5)',
     rsi: '#4aa3ff',
 };
+
+const YEARS_REPEAT_IN = 28;
+const DAYS_BETWEEN_REPEAT_YEARS = 10227;
+
+export const OBFUSCATE_DAYS_OFFSET = 77*YEARS_REPEAT_IN*DAYS_BETWEEN_REPEAT_YEARS;
+
+export const FUTURES = ['IMOEXF'];
+
+export const FUTURES_COMMISSION_PERCENT = 0.025;
+export const STOCKS_COMMISSION_PERCENT = 0.04;
