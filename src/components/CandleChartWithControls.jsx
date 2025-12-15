@@ -7,7 +7,7 @@ import {
     snapTimeToInterval,
     buildSyntheticCandle
 } from '../utils/chartHelpers';
-import { OBFUSCATE_DAYS_OFFSET, THEME } from '../utils/consts';
+import { INITIAL_LOOKBACK_CANDLES_AMOUNT, OBFUSCATE_DAYS_OFFSET, THEME } from '../utils/consts';
 
 import { useMarketData } from '../hooks/useMarketData';
 import { useChartPlayer } from '../hooks/useChartPlayer';
@@ -48,7 +48,7 @@ export default function CandleChartWithControls({
         const newCandles = await loadRandomSeries();
 
         if (newCandles && newCandles.length) {
-            const initialVisible = Math.min(newCandles.length - 1, 1500);
+            const initialVisible = Math.min(newCandles.length - 1, INITIAL_LOOKBACK_CANDLES_AMOUNT);
             setVisibleEndIndex(initialVisible);
 
             const last = newCandles[initialVisible];

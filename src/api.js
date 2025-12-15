@@ -81,9 +81,11 @@ export async function placeOrder(order) {
 }
 
 // POST /api/orders/:id/close
-export async function closeOrder(orderId) {
+export async function closeOrder(orderId, body) {
     const res = await fetch(`${API_BASE}/orders/${orderId}/close`, {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
     });
     if (!res.ok) throw new Error('Failed to close order');
     return res.json();

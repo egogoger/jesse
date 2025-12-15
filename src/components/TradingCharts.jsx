@@ -47,7 +47,18 @@ export default function TradingCharts({
         };
 
         // --- Candle Chart ---
-        const candleChart = createChart(candleChartContainerRef.current, commonOptions);
+        const candleChart = createChart(candleChartContainerRef.current, {
+            ...commonOptions,
+            rightPriceScale: {
+                visible: true,
+                borderVisible: false,
+                // Add padding to the price scale
+                scaleMargins: {
+                    top: 0.3,  // 10% padding at top
+                    bottom: 0.3, // 10% padding at bottom
+                },
+            },
+        });
         const candleSeries = candleChart.addCandlestickSeries();
         candleSeries.applyOptions({
             upColor: THEME.up,
