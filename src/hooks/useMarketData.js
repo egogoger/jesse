@@ -48,15 +48,18 @@ export function useMarketData(currentAnchorTime) {
     }, [selectedTicker]);
 
     // 2. Логика загрузки СЛУЧАЙНОГО периода (для Reset или первого входа)
-    const loadRandomSeries = useCallback(async () => {
-        if (!selectedTicker || !selectedInterval) return;
+    const loadRandomSeries = useCallback(async (ticker, interval) => {
+        console.info(`loadRandomSeries(${ticker}, ${interval})`);
+        if (!ticker || !interval) return;
         setLoading(true);
         try {
             const { candles: newCandles, hasMorePast: morePast } = await fetchRandomCandles({
-                ticker: selectedTicker,
-                interval: selectedInterval,
+                ticker,
+                interval,
             });
             setCandles(newCandles);
+            setSelectedTicker(ticker);
+            setSelectedInterval(interval);
             setHasMorePast(morePast);
             return newCandles;
         } catch (e) {
@@ -65,7 +68,7 @@ export function useMarketData(currentAnchorTime) {
         } finally {
             setLoading(false);
         }
-    }, [selectedTicker, selectedInterval]);
+    }, [selectedInterval]);
 
     // 3. Логика загрузки СИНХРОНИЗИРОВАННОГО периода (при смене таймфрейма)
     const loadAlignedSeries = useCallback(async (targetTime) => {
@@ -98,12 +101,8 @@ export function useMarketData(currentAnchorTime) {
         if (!selectedTicker || !selectedInterval) return;
 
         // Если у нас уже есть "Якорь" (мы переключаем ТФ в процессе работы)
-        if (anchorTimeRef.current) {
+        if (anchorTimeRef.current)
             loadAlignedSeries(anchorTimeRef.current);
-        } else {
-            // Если якоря нет (первая загрузка), берем рандом
-            loadRandomSeries();
-        }
 
         // ВАЖНО: В зависимостях НЕТ anchorTimeRef.current, только ticker/interval.
         // Это гарантирует, что эффект сработает только при смене тикера или интервала.

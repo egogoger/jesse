@@ -7,13 +7,14 @@ import {
     snapTimeToInterval,
     buildSyntheticCandle
 } from '../utils/chartHelpers';
-import { INITIAL_LOOKBACK_CANDLES_AMOUNT, OBFUSCATE_DAYS_OFFSET, THEME } from '../utils/consts';
+import { INITIAL_LOOKBACK_CANDLES_AMOUNT, OBFUSCATE_DAYS_OFFSET, RESET_INTERVAL, THEME } from '../utils/consts';
 
 import { useMarketData } from '../hooks/useMarketData';
 import { useChartPlayer } from '../hooks/useChartPlayer';
 
 import ChartControls from './ChartControls';
 import TradingCharts from './TradingCharts';
+import { getRandomArrayItem } from '../utils/utils';
 
 export default function CandleChartWithControls({
     obfuscate,
@@ -25,6 +26,7 @@ export default function CandleChartWithControls({
     commission,
 }) {
     const isSwitchingIntervalRef = useRef(false);
+    const isInitiallyPrepared = useRef(false);
 
     // Custom Hooks
     const {
@@ -42,40 +44,51 @@ export default function CandleChartWithControls({
         ffSpeed, toggleFF, changeSpeed
     } = useChartPlayer(candles.length);
 
+    const handlePrepare = useCallback(async (ticker, interval) => {
+        console.info(`handlePrepare(${ticker}, ${interval})`);
+        const newCandles = await loadRandomSeries(ticker, interval);
+
+        if (!newCandles?.length)
+            return void console.error('[handlePrepare] No random candles!');
+
+        const initialVisible = Math.min(newCandles.length - 1, INITIAL_LOOKBACK_CANDLES_AMOUNT);
+        setVisibleEndIndex(initialVisible);
+
+        const last = newCandles[initialVisible];
+
+        if (!last)
+            return void console.error('[handlePrepare] No last candle!');
+        onAnchorTimeChange?.(last.time);
+        // selected ticker and interval are set in loadRandomSeries
+        onReadyForTrading?.({
+            ticker: ticker,
+            interval: interval,
+            lastTime: last.time,
+            price: last.c,
+        });
+    }, [loadRandomSeries, onAnchorTimeChange, onReadyForTrading, setVisibleEndIndex]);
+
     // ВАЖНО: Функция handleReset должна явно сбрасывать якорь, если мы хотим "прыгнуть" в новое рандомное место.
     const handleReset = useCallback(async () => {
+        console.info('handleReset');
         setIsFFRunning(false);
-        const newCandles = await loadRandomSeries();
-
-        if (newCandles && newCandles.length) {
-            const initialVisible = Math.min(newCandles.length - 1, INITIAL_LOOKBACK_CANDLES_AMOUNT);
-            setVisibleEndIndex(initialVisible);
-
-            const last = newCandles[initialVisible];
-            if (last) {
-                if (onAnchorTimeChange) onAnchorTimeChange(last.time);
-                if (onReadyForTrading) {
-                    onReadyForTrading({
-                        ticker: selectedTicker,
-                        interval: selectedInterval,
-                        lastTime: last.time,
-                        price: last.c,
-                    });
-                }
-            }
-        }
-    }, [loadRandomSeries, onAnchorTimeChange, onReadyForTrading, selectedTicker, selectedInterval, setIsFFRunning, setVisibleEndIndex]);
+        const newTicker = getRandomArrayItem(tickers);
+        await handlePrepare(newTicker, RESET_INTERVAL);
+    }, [setIsFFRunning, handlePrepare, tickers]);
 
     useEffect(() => {
-        if (tickers.length && intervals.length)
-            handleReset();
-    }, [tickers.length, intervals.length]);
+        if (!isInitiallyPrepared.current && tickers.length && intervals.length && selectedTicker) {
+            handlePrepare(selectedTicker, RESET_INTERVAL);
+            isInitiallyPrepared.current = true;
+        }
+    }, [tickers.length, intervals.length, selectedTicker, isInitiallyPrepared]);
 
     // Handlers
     const handleIntervalChange = (val) => {
         isSwitchingIntervalRef.current = true;
         setSelectedInterval(val);
     };
+
 
     const handleLoadMorePast = useCallback(async (visibleFromTime) => {
         if (!candles.length) return;
