@@ -5,6 +5,7 @@ import {
     placeOrder,
     closeOrder,
 } from "../api";
+import { calculatePnLPercent, getCommission } from "../utils/utils";
 
 // A temporary order object exists ONLY in UI.
 // It is saved to DB only on close.
@@ -230,7 +231,7 @@ export default function TradingSidebar({
                     <div>{obf(o.ticker)} {o.side}</div>
                     <div>Entry: {fmt(o.entryPrice)}</div>
                     <div>Exit: {fmt(o.exitPrice)}</div>
-                    <div>PnL: {fmt(o.pnl)}</div>
+                    <div>PnL: {fmt(calculatePnLPercent(o.entryPrice, o.exitPrice, getCommission(o.ticker)))}%</div>
 
                     <button
                         style={{ marginTop: 4, width: "100%" }}

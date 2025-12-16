@@ -10,8 +10,10 @@ export function useChartPlayer(totalCandlesCount) {
     );
 
     useEffect(() => {
-        if (!isFFRunning) return;
+        if (!isFFRunning)
+            return;
         if (visibleEndIndex >= totalCandlesCount - 1) {
+            console.warn('[useChartPlayer.useEffect] No candles to run FF on');
             setIsFFRunning(false);
             return;
         }

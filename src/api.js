@@ -15,7 +15,7 @@ export async function fetchRandomCandles({ ticker, interval }) {
         )}&interval=${encodeURIComponent(interval)}&lookback=${INITIAL_LOOKBACK_CANDLES_AMOUNT}`
     );
     if (!res.ok) throw new Error('Failed to load candles');
-    return res.json(); // { candles: [...], hasMorePast: bool, hasMoreFuture: bool }
+    return res.json(); // { candles: [...], hasMorePast: bool }
 }
 
 // load more candles to the left (older)
@@ -43,7 +43,7 @@ export async function fetchAlignedCandles({ ticker, interval, targetTime }) {
     if (!res.ok) {
         throw new Error('Failed to fetch aligned candles');
     }
-    return res.json(); // returns { candles, hasMorePast, hasMoreFuture }
+    return res.json(); // returns { candles, hasMorePast }
 }
 
 // GET /api/meta/tickers -> ["IMOEXF", "SOMEOTHER", ...]

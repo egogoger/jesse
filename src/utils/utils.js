@@ -1,3 +1,5 @@
+import { FUTURES, FUTURES_COMMISSION_PERCENT, STOCKS_COMMISSION_PERCENT } from "./consts";
+
 export function getRandomArrayItem(arr) {
     return arr[Math.floor(Math.random() * arr.length)];
 }
@@ -42,4 +44,12 @@ function chooseNextItemAfterWeekend(items, chosenIndex) {
 export function getItemAfterWeekend(items, chosenIndex) {
     const nextIndex = chooseNextItemAfterWeekend(items, chosenIndex);
     return items[nextIndex];
+}
+
+export function calculatePnLPercent(openPrice, closePrice, commissionPercent) {
+    return (closePrice-openPrice)/openPrice*100 - commissionPercent*2;
+}
+
+export function getCommission(ticker) {
+    return FUTURES.includes(ticker) ? STOCKS_COMMISSION_PERCENT : FUTURES_COMMISSION_PERCENT;
 }

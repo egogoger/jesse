@@ -72,6 +72,7 @@ export function useMarketData(currentAnchorTime) {
 
     // 3. Логика загрузки СИНХРОНИЗИРОВАННОГО периода (при смене таймфрейма)
     const loadAlignedSeries = useCallback(async (targetTime) => {
+        console.log(`loadAlignedSeries(${targetTime})`);
         if (!selectedTicker || !selectedInterval) return;
         setLoading(true);
         try {
@@ -98,7 +99,7 @@ export function useMarketData(currentAnchorTime) {
 
     // 4. Главный Effect для переключения данных
     useEffect(() => {
-        if (!selectedTicker || !selectedInterval) return;
+        if (!selectedTicker || !selectedInterval || selectedInterval==='5min') return;
 
         // Если у нас уже есть "Якорь" (мы переключаем ТФ в процессе работы)
         if (anchorTimeRef.current)
@@ -106,7 +107,7 @@ export function useMarketData(currentAnchorTime) {
 
         // ВАЖНО: В зависимостях НЕТ anchorTimeRef.current, только ticker/interval.
         // Это гарантирует, что эффект сработает только при смене тикера или интервала.
-    }, [selectedTicker, selectedInterval, loadRandomSeries, loadAlignedSeries]);
+    }, [selectedTicker, selectedInterval, loadAlignedSeries]);
 
     const loadMorePast = useCallback(async () => {
         if (!candles.length || !selectedTicker || !selectedInterval) return;

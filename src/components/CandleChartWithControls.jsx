@@ -51,7 +51,7 @@ export default function CandleChartWithControls({
         if (!newCandles?.length)
             return void console.error('[handlePrepare] No random candles!');
 
-        const initialVisible = Math.min(newCandles.length - 1, INITIAL_LOOKBACK_CANDLES_AMOUNT);
+        const initialVisible = Math.min(newCandles.length - 1, INITIAL_LOOKBACK_CANDLES_AMOUNT-1000);
         setVisibleEndIndex(initialVisible);
 
         const last = getItemAfterWeekend(newCandles, initialVisible);
@@ -83,12 +83,10 @@ export default function CandleChartWithControls({
         }
     }, [tickers.length, intervals.length, selectedTicker, isInitiallyPrepared]);
 
-    // Handlers
     const handleIntervalChange = (val) => {
         isSwitchingIntervalRef.current = true;
         setSelectedInterval(val);
     };
-
 
     const handleLoadMorePast = useCallback(async (visibleFromTime) => {
         if (!candles.length) return;
