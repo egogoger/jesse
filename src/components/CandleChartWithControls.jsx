@@ -14,7 +14,7 @@ import { useChartPlayer } from '../hooks/useChartPlayer';
 
 import ChartControls from './ChartControls';
 import TradingCharts from './TradingCharts';
-import { getRandomArrayItem } from '../utils/utils';
+import { getItemAfterWeekend, getRandomArrayItem } from '../utils/utils';
 
 export default function CandleChartWithControls({
     obfuscate,
@@ -54,7 +54,7 @@ export default function CandleChartWithControls({
         const initialVisible = Math.min(newCandles.length - 1, INITIAL_LOOKBACK_CANDLES_AMOUNT);
         setVisibleEndIndex(initialVisible);
 
-        const last = newCandles[initialVisible];
+        const last = getItemAfterWeekend(newCandles, initialVisible);
 
         if (!last)
             return void console.error('[handlePrepare] No last candle!');

@@ -1,5 +1,7 @@
 // src/api.js
 
+import { INITIAL_LOOKBACK_CANDLES_AMOUNT } from "./utils/consts";
+
 const API_BASE = '/api';
 
 // ---- Candles ----
@@ -10,7 +12,7 @@ export async function fetchRandomCandles({ ticker, interval }) {
     const res = await fetch(
         `${API_BASE}/candles/random?ticker=${encodeURIComponent(
             ticker
-        )}&interval=${encodeURIComponent(interval)}`
+        )}&interval=${encodeURIComponent(interval)}&lookback=${INITIAL_LOOKBACK_CANDLES_AMOUNT}`
     );
     if (!res.ok) throw new Error('Failed to load candles');
     return res.json(); // { candles: [...], hasMorePast: bool, hasMoreFuture: bool }
